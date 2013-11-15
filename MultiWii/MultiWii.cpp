@@ -745,6 +745,90 @@ void go_disarm() {
   }
 }
 
+#if DELUX_FEATURES
+char to_hex(uint8_t v)
+{
+  v &= 0x0F;
+  if( (v>=0) && (v<=9) )
+    return v + '0';
+  return v + 'A' - 10;
+}
+
+void send_hex_nib(uint8_t n)
+{
+  SerialWrite(0,to_hex(n));
+}
+
+void send_hex_byte(uint8_t b)
+{
+  send_hex_nib(b>>4);
+  send_hex_nib(b);
+}
+
+void send_hex_word(uint16_t w)
+{
+  send_hex_byte(w>>8);
+  send_hex_byte(w);
+}
+
+void send_hex_dword(uint32_t d)
+{
+  send_hex_word(d>>16);
+  send_hex_word(d);
+}
+
+void send_newline(void)
+{
+  SerialWrite(0,'\n');
+}
+
+void send_delimiter(void)
+{
+  SerialWrite(0,' ');
+}
+
+void send_location(void)
+{
+  send_hex_word(analog.rssi);
+  send_delimiter();
+  send_hex_byte(analog.vbat);
+  send_delimiter();
+  send_hex_dword(GPS_coord[0]);
+  send_delimiter();
+  send_hex_dword(GPS_coord[1]);
+  send_delimiter();
+  send_hex_byte(GPS_numSat);
+  send_delimiter();
+  send_hex_word(GPS_altitude);
+  send_delimiter();
+  send_hex_word(GPS_speed);
+  send_delimiter();
+//  send_hex_word(GPS_ground_course);
+  send_hex_word(att.heading+180);
+  send_newline();
+}
+
+/*
+#include <stdarg.h>
+void p(char *fmt, ... ){
+        static char tmp[128]; // resulting string limited to 128 chars
+        va_list args;
+        va_start (args, fmt );
+        vsnprintf(tmp, 128, fmt, args);
+        va_end (args);
+//        Serial.println(tmp);
+        {
+          char *p = tmp;
+          while(*p) {
+            serialize8(*p);
+            p++;
+          }
+          serialize8('\r');
+        }
+}
+*/
+#endif
+
 // ******** Main Loop *********
 void loop () {
   static uint8_t rcDelayCommand; // this indicates the number of time (multiple of RC measurement at 50Hz) the sticks must be maintained to run or switch off motors
@@ -1342,4 +1426,21 @@ void loop () {
   // do not update servos during unarmed calibration of sensors which are sensitive to vibration
   if ( (f.ARMED) || ((!calibratingG) && (!calibratingA)) ) writeServos();
   writeMotors();
+
+#if DELUX_FEATURES
+  analog.rssi = rcData[7];
+  {
+    // 15s from reboot - my serial code kicks in...
+    //if( currentTime > 5000L )
+    {
+      static uint32_t last_serial_output = 0;
+      static uint8_t now_what = 0;
+      if( currentTime - last_serial_output > 2000000L )
+      {
+        send_location();
+        last_serial_output = currentTime;
+      }
+    }
+  }
+#endif
 }

@@ -555,19 +555,36 @@ void initOutput() {
 
   /********  special version of MultiWii to calibrate all attached ESCs ************/
   #if defined(ESC_CALIB_CANNOT_FLY)
-    writeAllMotors(ESC_CALIB_HIGH);
-    blinkLED(2,20, 2);
-    delay(4000);
-    writeAllMotors(ESC_CALIB_LOW);
-    blinkLED(3,20, 2);
-    while (1) {
-      delay(5000);
-      blinkLED(4,20, 2);
-    #if defined(BUZZER)
-      alarmArray[7] = 2;
-    #endif
+  // if AUX3 grounded - ie. button pressed...
+  {
+    char cnt;
+    char sum = 0;
+
+    pinMode(AUX3PIN,INPUT);    // AUX3 - input with pullup
+    digitalWrite(AUX3PIN, HIGH);
+    delay(50);  
+
+    for( cnt=0; cnt<20; cnt++ ) {
+      sum += digitalRead(AUX3PIN) == LOW ? 1 : 0;
     }
-    exit; // statement never reached
+
+    if( sum == cnt ) {
+      writeAllMotors(ESC_CALIB_HIGH);
+      blinkLED(2,20, 2);
+      delay(4000);
+      writeAllMotors(ESC_CALIB_LOW);
+      blinkLED(3,20, 2);
+      cnt = 3;
+      while (cnt) {
+        delay(5000);
+        blinkLED(4,20, 2);
+      #if defined(BUZZER)
+        alarmArray[7] = 2;
+      #endif
+        cnt--;
+      }
+    }
+  }
   #endif
   
   writeAllMotors(MINCOMMAND);
