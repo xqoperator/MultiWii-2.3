@@ -566,6 +566,7 @@ void initOutput() {
 
     for( cnt=0; cnt<20; cnt++ ) {
       sum += digitalRead(AUX3PIN) == LOW ? 1 : 0;
+      delay(50);
     }
 
     if( sum == cnt ) {
