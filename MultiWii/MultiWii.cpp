@@ -856,6 +856,11 @@ void loop () {
   int16_t rc;
   int32_t prop = 0;
 
+  #if DELUX_FEATURES
+    // I want pullup on PPM sum pin
+    PORTD |= 1<<2;
+  #endif
+
   #if defined(SPEKTRUM)
     if (spekFrameFlags == 0x01) readSpektrum();
   #endif
@@ -965,10 +970,10 @@ void loop () {
           previousTime = micros();
         }
         #ifdef ALLOW_ARM_DISARM_VIA_TX_YAW
-          else if (conf.activate[BOXARM] == 0 && rcSticks == THR_LO + YAW_HI + PIT_CE + ROL_CE) go_arm();      // Arm via YAW
+          else if (conf.activate[BOXARM] == 0 && rcSticks == THR_LO + YAW_HI + PIT_CE + ROL_CE && f.OK_TO_ARM) go_arm();      // Arm via YAW
         #endif
         #ifdef ALLOW_ARM_DISARM_VIA_TX_ROLL
-          else if (conf.activate[BOXARM] == 0 && rcSticks == THR_LO + YAW_CE + PIT_CE + ROL_HI) go_arm();      // Arm via ROLL
+          else if (conf.activate[BOXARM] == 0 && rcSticks == THR_LO + YAW_CE + PIT_CE + ROL_HI && f.OK_TO_ARM) go_arm();      // Arm via ROLL
         #endif
         #ifdef LCD_TELEMETRY_AUTO
           else if (rcSticks == THR_LO + YAW_CE + PIT_HI + ROL_LO) {              // Auto telemetry ON/OFF
@@ -1058,7 +1063,14 @@ void loop () {
       }
     #endif
 
-    if (rcOptions[BOXARM] == 0) f.OK_TO_ARM = 1;
+    if (rcOptions[BOXARM] == 0) {
+#if DELUX_FEATURES
+  // only arm in ACC stabilization mode....
+      f.OK_TO_ARM = f.ANGLE_MODE;
+#else
+      f.OK_TO_ARM = 1;
+#endif
+    }
     #if !defined(GPS_LED_INDICATOR)
       if (f.ANGLE_MODE || f.HORIZON_MODE) {STABLEPIN_ON;} else {STABLEPIN_OFF;}
     #endif
